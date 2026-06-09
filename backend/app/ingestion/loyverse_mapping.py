@@ -36,3 +36,34 @@ def classify_receipt(receipt: dict[str, Any]) -> tuple[str, Optional[str]]:
 def receipt_discount(receipt: dict[str, Any]) -> Decimal:
     """Total receipt-level discount, as a non-null Decimal."""
     return Decimal(str(receipt.get("total_discount", 0) or 0))
+
+
+def parse_payments(receipt: dict[str, Any]) -> tuple[Decimal, Decimal, str]:
+    """Return (cash_amount, transfer_amount, method) from a Loyverse receipt.
+
+    Loyverse payment objects use the key 'name' (e.g. 'Cash', 'Transfer').
+    Stores should name their PromptPay/bank-transfer type with 'transfer'
+    in the name for this detection to work.
+    """
+    payments = receipt.get("payments", [])
+    cash = sum(
+        Decimal(str(p.get("money_amount", 0)))
+        for p in payments if p.get("name", "").lower() == "cash"
+    )
+    transfer = sum(
+        Decimal(str(p.get("money_amount", 0)))
+        for p in payments if "transfer" in p.get("name", "").lower()
+    )
+    if cash and not transfer:
+        method = "cash"
+    elif transfer and not cash:
+        method = "transfer"
+    else:
+        method = "mixed"
+    return cash, transfer, method
+
+
+def payment_method(receipt: dict[str, Any]) -> str:
+    """Convenience wrapper returning only the method string."""
+    _, _, method = parse_payments(receipt)
+    return method

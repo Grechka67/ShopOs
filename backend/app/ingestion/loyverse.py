@@ -11,7 +11,7 @@ import httpx
 
 from app.config import get_settings
 from app.db import session_scope
-from app.ingestion.loyverse_mapping import classify_receipt, receipt_discount
+from app.ingestion.loyverse_mapping import classify_receipt, parse_payments, receipt_discount
 from app.models import Employee, Event, PosTransaction, Shift
 
 log = logging.getLogger("ot.ingest.loyverse")
@@ -62,17 +62,7 @@ def poll_loyverse_receipts() -> None:
             session.add(event)
             session.flush()
 
-            cash_amount = sum(
-                Decimal(str(p.get("money_amount", 0)))
-                for p in r.get("payments", []) if p.get("payment_type_name", "").lower() == "cash"
-            )
-            transfer_amount = sum(
-                Decimal(str(p.get("money_amount", 0)))
-                for p in r.get("payments", []) if "transfer" in p.get("payment_type_name", "").lower()
-            )
-            method = "cash" if cash_amount and not transfer_amount else (
-                "transfer" if transfer_amount and not cash_amount else "mixed"
-            )
+            cash_amount, transfer_amount, method = parse_payments(r)
 
             ts = event.source_timestamp or datetime.now(BKK)
 
