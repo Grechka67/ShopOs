@@ -5,8 +5,8 @@ database); the field-level decisions that *don't* need the DB live here, where
 they can be tested against captured receipt JSON in isolation — the same split
 as reconciliation/matching.py and anomaly/scoring.py.
 
-Field names follow Loyverse's Receipts API and are unverified against a real
-store account — validate them against one real receipt before going live.
+Field names verified against a real Loyverse account (2026-06-09). A bug was
+found and fixed: the payment field is 'name', not 'payment_type_name'.
 """
 from __future__ import annotations
 

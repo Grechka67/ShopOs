@@ -109,8 +109,10 @@ section) is only needed if you want remote or multi-device access.
 3. **Connect your POS (Loyverse).** Set `LOYVERSE_API_TOKEN`; the poller pulls new receipts
    automatically (about once a minute) into `pos_transactions`, mapping each receipt's cashier,
    shift, void/refund status and discount so cash reconciliation and the anomaly rules have the
-   fields they need. The Loyverse field names this relies on are **unverified against a live
-   account** — check them against one real receipt first.
+   fields they need. Field names verified against a real Loyverse account (2026-06-09) — one
+   bug was found and fixed (`payment_type_name` → `name`). **One caveat:** name your PromptPay/bank-transfer
+   payment type in Loyverse with "transfer" in the name (e.g. "Bank Transfer") so the reconciler
+   detects it correctly; types named "PromptPay" or "QR" will fall through to "mixed".
 4. **Connect bank deposits (KBank SMS).** On a dedicated phone holding the shop's bank SIM, install
    an Android *SMS-forwarder* app and point it at `POST /ingest/kbank/sms`, HMAC-signing each
    message with your secret. **Validate the parser on a few of your real deposit SMS first** — bank
@@ -177,8 +179,8 @@ dashboard, the alert feed, API-key auth, and the full synthetic demo.
 - Runs on **synthetic data**; wiring real Loyverse/KBank/NeoCall sources needs real credentials and
   validation against real message formats (see `docs/RUNBOOK.md`).
 - The live Loyverse receipt→`pos_transactions` projection (cashier, shift, void/refund, discount) is
-  wired and unit-tested, but has **never run against a real Loyverse account** — its field mapping
-  needs validating on real receipts before the cash/anomaly numbers can be trusted live.
+  wired and unit-tested against real receipt shapes (field mapping validated 2026-06-09, bug fixed).
+  Full end-to-end poll loop (HTTP → DB write) has not been exercised on a live store.
 - The transfer reconciler matches on **exact amount + time window**; known edge cases (same-amount
   collisions, no durable poll cursor) are documented as future work.
 - An offline staff app (cash/stock counting) is planned but not yet implemented.
